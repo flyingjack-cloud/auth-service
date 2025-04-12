@@ -1,0 +1,44 @@
+server:
+  address: 0.0.0.0
+spring:
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+  messages:
+    basename: i18n/message
+    encoding: utf-8
+  cloud:
+    sentinel:
+      eager: false
+      transport:
+        dashboard: ${SENTINEL_HOST:127.0.0.1}:8858
+      datasource:
+        # 流控规则
+        flow-rule:
+          nacos:
+            server-addr: ${NACOS_HOST:127.0.0.1}:8848
+            namespace: flyingjack-${spring.profiles.active}
+            data-id: ${spring.application.name}-flow-rules.json
+            group-id: SENTINEL_GROUP
+            data-type: json
+            rule-type: flow
+        # 熔断规则
+        degrade-rule:
+          nacos:
+            server-addr: ${NACOS_HOST:127.0.0.1}:8848
+            namespace: flyingjack-${spring.profiles.active}
+            data-id: ${spring.application.name}-degrade-rules.json
+            group-id: SENTINEL_GROUP
+            data-type: json
+            rule-type: degrade
+
+feign:
+  sentinel:
+    enabled: true # @FeignClient将会被自动添加@SentinelResource
+
+# 雪花ID配置
+snowflake:
+  datacenter-id: ${DATACENTER_ID:1} # 不能超过31
+  machine-id: ${MACHINE_ID:1} # 不能超过31
