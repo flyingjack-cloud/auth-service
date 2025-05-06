@@ -1,0 +1,23 @@
+namespace: beta
+
+resources:
+  - ../../base
+
+configMapGenerator:
+  - name: auth-service-config
+    behavior: merge
+    literals:
+      - SPRING_PROFILES_ACTIVE=beta # 手动指定为beta环境
+    files:
+      - application-beta.yml
+
+secretGenerator:
+  - name: auth-connect-secret
+    envs:
+      - connect.env.secret
+    options:
+      labels:
+        secret.group: auth-connect # spring-cloud 通过这个自定义label寻找secret
+
+patches:
+  - path: deployment-patch.yaml

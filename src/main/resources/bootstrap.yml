@@ -1,19 +1,21 @@
 spring:
-  application:
-    name: auth
   cloud:
-    nacos:
-      discovery:
-        namespace: flyingjack-${spring.profiles.active} # 根据激活环境使用不同的命名空间
-        server-addr: ${NACOS_HOST:127.0.0.1}:8848
+    kubernetes:
       config:
-        server-addr: ${NACOS_HOST:127.0.0.1}:8848
-        namespace: flyingjack-${spring.profiles.active} # 根据激活环境使用不同的命名空间
-        group: DEFAULT_GROUP
-        file-extension: yaml
-        # 额外配置文件
-        shared-configs:
-          - data-id: connect.yml
-            group: COMMON_GROUP
-            refresh: false
+        name: auth-service-config
+        enabled: true
+        # 默认会调用pod的namespace，也可以用下面的手动获取
+        # namespace: ${SPRING_PROFILES_ACTIVE:default}
+      secrets:
+        enabled: true
+        enable-api: true
+        fail-fast: true
+        labels:
+          secret.group: auth-connect
+      reload:
+        enabled: true
+        mode: polling
+        period: 500
 
+server:
+  port: 9000
