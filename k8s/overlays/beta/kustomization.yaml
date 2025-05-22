@@ -1,4 +1,4 @@
-namespace: beta
+namespace: beta # 手动指定为dev环境下方也需要修改
 
 resources:
   - ../../base
@@ -7,7 +7,7 @@ configMapGenerator:
   - name: auth-service-config
     behavior: merge
     literals:
-      - SPRING_PROFILES_ACTIVE=beta # 手动指定为beta环境
+      - SPRING_PROFILES_ACTIVE=beta # 手动指定为dev环境，上方也需要修改
     files:
       - application-beta.yml
 
@@ -18,6 +18,12 @@ secretGenerator:
     options:
       labels:
         secret.group: auth-connect # spring-cloud 通过这个自定义label寻找secret
+  - name: redis-access-secret
+    envs:
+      - redis.env.secret
+    options:
+      labels:
+        secret.group: cache-access-secret
 
 patches:
   - path: deployment-patch.yaml

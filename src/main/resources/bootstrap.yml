@@ -1,4 +1,4 @@
-spring:
+spring: # 不要设置spring.application.name不然k8s默认{application-name}.yml
   cloud:
     kubernetes:
       config:
@@ -10,12 +10,12 @@ spring:
         enabled: true
         enable-api: true
         fail-fast: true
-        labels:
-          secret.group: auth-connect
+        sources:
+          - labels:
+              secret.group: auth-connect
+          - labels:
+              secret.group: cache-access-secret
       reload:
         enabled: true
         mode: polling
         period: 500
-
-server:
-  port: 9000

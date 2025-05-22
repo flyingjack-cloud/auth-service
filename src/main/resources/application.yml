@@ -1,4 +1,9 @@
+# 一切应该以k8s路径下为准
 spring:
+  application:
+    name: auth-service
+  kafka:
+    bootstrap-servers: localhost:9092
   # 注意以下的值可能会k8s覆盖
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
@@ -17,7 +22,17 @@ feign:
   sentinel:
     enabled: true # @FeignClient将会被自动添加@SentinelResource
 
+
 # 雪花ID配置
 snowflake:
-  datacenter-id: ${DATACENTER_ID:1} # 不能超过31
-  machine-id: ${MACHINE_ID:1} # 不能超过31
+  datacenter-id: ${DATACENTER_ID:"node-1"} # 不能超过31
+  machine-id: ${MACHINE_ID:"pod-1"} # 不能超过31
+
+# 默认只暴露 健康状态和基本信息
+management:
+  server:
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus

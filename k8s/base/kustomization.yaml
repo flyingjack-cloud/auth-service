@@ -3,3 +3,4 @@ resources:
   - configmap.yaml
   - service.yaml
   - rbac-sa-role-binding.yaml
+  - networking.yaml

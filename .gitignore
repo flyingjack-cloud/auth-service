@@ -1,3 +1,6 @@
+# no secret
+**/*.secret
+
 # 环境配置
 application-dev.*
 application-test.*

@@ -42,6 +42,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests((authorize) -> authorize
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**")
                         .permitAll() // 放行doc相关接口
+                        .requestMatchers("/actuator/**") // 放行监控路径
+                        .permitAll()
                         .requestMatchers("/account/**", "/oauth2/**", "/.well-know/**")
                         .permitAll() // 放行account和oauth2端口
                         .anyRequest()

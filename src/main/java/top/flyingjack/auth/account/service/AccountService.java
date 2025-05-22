@@ -2,7 +2,6 @@ package top.flyingjack.auth.account.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -13,6 +12,7 @@ import top.flyingjack.auth.account.entity.AuthUser;
 import top.flyingjack.auth.account.entity.PrincipalType;
 import top.flyingjack.auth.account.entity.dto.UserRequestDto;
 import top.flyingjack.auth.account.service.repository.AuthUserRepository;
+import top.flyingjack.auth.config.SnowflakeIdGenerator;
 import top.flyingjack.auth.feign.client.CaptchaClient;
 import top.flyingjack.common.dto.CaptchaRequest;
 import top.flyingjack.common.error.ErrorCode;
@@ -34,19 +34,14 @@ public class AccountService {
     private final AuthUserRepository authUserRepository;
     private final CaptchaClient captchaClient;
     private final PasswordEncoder passwordEncoder;
-
-    @Value("${snowflake.datacenter-id}")
-    long datacenterId;
-    @Value("${snowflake.machine-id}")
-    long machineId;
     private final SnowflakeIdGeneratorDelegate snowflakeIdGenerator;
 
     public AccountService(AuthUserRepository authUserRepository, CaptchaClient captchaClient,
-                          PasswordEncoder passwordEncoder) {
+                          PasswordEncoder passwordEncoder, SnowflakeIdGenerator snowflakeIdGenerator) {
         this.authUserRepository = authUserRepository;
         this.captchaClient = captchaClient;
         this.passwordEncoder = passwordEncoder;
-        this.snowflakeIdGenerator = new SnowflakeIdGeneratorDelegate(datacenterId, machineId);
+        this.snowflakeIdGenerator = snowflakeIdGenerator.getDelegate();
     }
 
     /**

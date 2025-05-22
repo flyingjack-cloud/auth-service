@@ -10,22 +10,22 @@ spring:
     url: jdbc:postgresql://beta.flyingcloud.com:5432/auth
     username: ${DB_USER}
     password: ${DB_PASSWORD}
-  logging:
-    level:
-      root: INFO
-      org:
-        hibernate:
-          type: TRACE
-          SQL: DEBUG
-        springframework:
-          boot:
-            autoconfigure:
-              jdbc: DEBUG
-      com:
-        zaxxer:
-          hikari:
-            HikariConfig: DEBUG
-debug: true
+#  logging:
+#    level:
+#      root: INFO
+#      org:
+#        hibernate:
+#          type: TRACE
+#          SQL: DEBUG
+#        springframework:
+#          boot:
+#            autoconfigure:
+#              jdbc: DEBUG
+#      com:
+#        zaxxer:
+#          hikari:
+#            HikariConfig: DEBUG
+#debug: true
 
 springdoc:
   swagger-ui:
@@ -33,8 +33,24 @@ springdoc:
   api-docs:
     enabled: true
 
-logging:
-  level:
-    org.springframework.boot.env: DEBUG
-    org.springframework.boot.context.config: TRACE
-    org.springframework.cloud.kubernetes: DEBUG
+#logging:
+#  level:
+#    org.springframework.boot.env: DEBUG
+#    org.springframework.boot.context.config: DEBUG
+#    org.springframework.cloud.kubernetes: DEBUG
+
+management:
+  server:
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+        step: 1m

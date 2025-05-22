@@ -5,9 +5,11 @@ metadata:
 data:
   SPRING_PROFILES_ACTIVE: "default"
   application.yml: |
+    spring:
+      application:
+        name: auth-service
     server:
       port: 8080
-    spring:
       jackson:
         date-format: yyyy-MM-dd HH:mm:ss
         serialization:
@@ -36,3 +38,12 @@ data:
         enabled: false
       api-docs:
         enabled: false
+    
+    # 防止过分暴露
+    management:
+      server:
+        port: 8081
+      endpoints:
+        web:
+          exposure:
+            include: health, info

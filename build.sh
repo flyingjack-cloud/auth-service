@@ -1,83 +1,82 @@
 #!/bin/bash
 
-# 定义变量（请根据实际情况修改）
-DOCKER_IMAGE_NAME="flyingjack-auth-service"      # 镜像名称
-DEFAULT_TAG="latest"            # 默认tag
-DOCKER_REGISTRY="registry.wms.com" # 镜像仓库地址，如docker.io/yourname
-DOCKERFILE_PATH="."             # Dockerfile路径
-MVN_PROFILE="-PBeta"                  # Maven profile，如有需要可设置为"-Pprod"
+set -e  # 如果发生错误，立即退出脚本
+set -o pipefail  # 避免错误被隐藏
+# set -x  # 启用调试模式，显示每个命令执行情况
 
-# 预检查 检查Docker Registry访问权限
-echo "预检查: 检查Docker Registry访问权限..."
-if ! docker login $DOCKER_REGISTRY > /dev/null 2>&1; then
-    echo "错误：无法访问Docker Registry $DOCKER_REGISTRY，请检查："
-    echo "1. Registry地址是否正确"
-    echo "2. 是否已执行 docker login"
-    echo "3. 网络连接是否正常"
-    exit 1
-fi
-echo "Docker Registry访问权限验证通过"
+# 1. 获取 Maven 版本
+DEFAULT_TAG=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
 
-# 0. 确认MVN_PROFILE已设置
-if [ -z "$MVN_PROFILE" ]; then
-    echo "错误：MVN_PROFILE未设置，请编辑脚本设置Maven profile（如-Pprod）"
-    exit 1
-fi
-echo "当前Maven profile: $MVN_PROFILE"
+# 2. 定义变量（请根据你的需要修改）
+DOCKER_IMAGE_NAME="flyingjack-auth-service"
+DOCKER_REGISTRY="registry.wms.com:8443/cloud"
+DOCKERFILE_PATH="."
+# 读取入参，如果没有传入，则使用默认值 'prod'
+MVN_PROFILE=${1:-beta}
 
-# 1. 询问是否跳过测试
-read -p "步骤1: 是否跳过测试? (y/n) " SKIP_TESTS
-if [[ $SKIP_TESTS =~ ^[Yy]$ ]]; then
-    MVN_SKIP_TESTS="-DskipTests"
-    echo "将跳过测试..."
-else
-    MVN_SKIP_TESTS=""
-    echo "将执行测试..."
-fi
+echo "当前版本: $DEFAULT_TAG"
+echo "当前Maven Profile: $MVN_PROFILE"
+echo "即将构建的镜像名 = $DOCKER_IMAGE_NAME"
+echo "仓库地址 = $DOCKER_REGISTRY"
+echo "构建路径 = $DOCKERFILE_PATH"
 
-# 2. 执行mvn clean package进行打包
-echo "步骤2: 执行mvn clean package..."
-mvn clean package $MVN_PROFILE $MVN_SKIP_TESTS
-if [ $? -ne 0 ]; then
-    echo "mvn打包失败，请检查错误!"
-    exit 1
-fi
-
-# 3. 执行docker build进行镜像构建
-echo "步骤3: 执行docker build..."
-docker build -t $DOCKER_IMAGE_NAME:$DEFAULT_TAG $DOCKERFILE_PATH
-if [ $? -ne 0 ]; then
-    echo "docker构建失败，请检查错误!"
-    exit 1
-fi
-
-# 4.0 询问是否上传镜像
-read -p "步骤4.0: 是否要上传镜像到仓库? (y/n) " UPLOAD_CHOICE
-if [[ ! $UPLOAD_CHOICE =~ ^[Yy]$ ]]; then
-    echo "已选择不上传镜像，脚本结束。"
+read -p "Step 1: Continue with Maven build and Docker process? (y/n): " CONTINUE
+if [[ ! "$CONTINUE" =~ ^[Yy]$ ]]; then
+    echo "[INFO] User chose to exit. Script completed."
     exit 0
 fi
 
-# 4 tag远程镜像
-echo "步骤4.1 当前镜像tag为: $DEFAULT_TAG"
-read -p "请输入要远程镜像库上传的tag(留空使用默认tag $DEFAULT_TAG): " CUSTOM_TAG
-FINAL_TAG=${CUSTOM_TAG:-$DEFAULT_TAG}
+# 3. 是否跳过测试
+read -p "Step 1: Skip tests? (y/n): " SKIP_TESTS
+MVN_SKIP_TESTS=""
+if [[ "$SKIP_TESTS" =~ ^[Yy]$ ]]; then
+    MVN_SKIP_TESTS="-DskipTests"
+    echo "[INFO] Tests will be skipped..."
+else
+    echo "[INFO] Tests will be executed..."
+fi
 
-echo "步骤4.2 执行docker tag..."
+# 4. 执行 Maven 构建
+echo "Step 2: Running mvn clean package..."
+if ! mvn clean package -P "$MVN_PROFILE" $MVN_SKIP_TESTS; then
+    echo "[ERROR] Maven build failed!"
+    exit 1
+fi
+
+# 5. 构建 Docker 镜像
+echo "Step 3: Building Docker image..."
+if ! docker build -t "$DOCKER_IMAGE_NAME:$DEFAULT_TAG" "$DOCKERFILE_PATH"; then
+    echo "[ERROR] Docker build failed!"
+    exit 1
+fi
+
+# 6. 询问是否上传镜像
+read -p "Step 4.0: Upload image to registry? (y/n): " UPLOAD_CHOICE
+if [[ ! "$UPLOAD_CHOICE" =~ ^[Yy]$ ]]; then
+    echo "[INFO] Image upload skipped. Script completed."
+    exit 0
+fi
+
+# 7. 允许用户输入自定义标签
+echo "当前镜像标签: $DEFAULT_TAG"
+read -p "Step 4.1: Enter custom tag (leave blank for default $DEFAULT_TAG): " CUSTOM_TAG
+FINAL_TAG="${CUSTOM_TAG:-$DEFAULT_TAG}"
+
+# 8. 执行 Docker Tag
 TAGGED_IMAGE="$DOCKER_REGISTRY/$DOCKER_IMAGE_NAME:$FINAL_TAG"
-docker tag $DOCKER_IMAGE_NAME:$DEFAULT_TAG $TAGGED_IMAGE
-if [ $? -ne 0 ]; then
-    echo "docker tag失败，请检查错误!"
+echo "Step 4.2: Tagging Docker image...$TAGGED_IMAGE"
+if ! docker tag "$DOCKER_IMAGE_NAME:$DEFAULT_TAG" "$TAGGED_IMAGE"; then
+    echo "[ERROR] Docker tag failed!"
     exit 1
 fi
 
-# 5 推送远程镜像
-echo "步骤5 执行docker push..."
-docker push $TAGGED_IMAGE
-if [ $? -ne 0 ]; then
-    echo "docker push失败，请检查错误!"
+# 9. 推送镜像到 Registry
+echo "Step 5: Pushing Docker image..."
+if ! docker push "$TAGGED_IMAGE"; then
+    echo "[ERROR] Docker push failed!"
     exit 1
 fi
 
-echo "操作完成!"
-echo "镜像已成功上传到: $TAGGED_IMAGE"
+# 10. 最终输出成功信息
+echo "[SUCCESS] Operation completed!"
+echo "Image successfully uploaded to: $TAGGED_IMAGE"
