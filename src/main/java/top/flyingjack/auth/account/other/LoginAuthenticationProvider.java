@@ -13,10 +13,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.Assert;
 import top.flyingjack.auth.account.entity.PrincipalType;
 import top.flyingjack.auth.account.service.LoginAttemptService;
+import top.flyingjack.auth.account.service.LoginUserDetailService;
 import top.flyingjack.common.error.ErrorCode;
 import top.flyingjack.common.error.SysErrorMsgTool;
-import top.flyingjack.auth.account.entity.dto.UserLoginDto;
-import top.flyingjack.auth.account.service.LoginUserDetailService;
+
+import java.math.BigInteger;
 
 
 /**

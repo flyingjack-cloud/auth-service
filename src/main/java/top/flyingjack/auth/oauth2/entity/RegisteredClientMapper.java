@@ -3,6 +3,8 @@ package top.flyingjack.auth.oauth2.entity;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
@@ -24,6 +26,8 @@ import java.util.stream.Collectors;
  * @date 2025/4/4 12:36
  */
 public class RegisteredClientMapper {
+    private static final Logger log = LoggerFactory.getLogger(RegisteredClientMapper.class);
+
     private ObjectMapper objectMapper;
 
     public RegisteredClientMapper(ObjectMapper objectMapper) {
@@ -109,7 +113,6 @@ public class RegisteredClientMapper {
                         value = Duration.parse((String) value);
                     } catch (Exception e) {
                         // 如果解析失败，保留原值
-                        System.err.println("Failed to parse Duration: " + value);
                     }
                 }
                 settings.put(entry.getKey(), value);

@@ -2,8 +2,6 @@
 spring:
   application:
     name: auth-service
-  kafka:
-    bootstrap-servers: localhost:9092
   # 注意以下的值可能会k8s覆盖
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss

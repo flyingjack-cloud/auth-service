@@ -1,13 +1,13 @@
 spring:
   data:
     redis:
-      host: beta.flyingcloud.com
+      host: ${REDIS_HOST}
       port: 6379
       password: ${REDIS_PASSWORD} # 通过k8s secret注入
       database: 0
       timeout: 5000 #5s
   datasource:
-    url: jdbc:postgresql://beta.flyingcloud.com:5432/auth
+    url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
 #  logging:

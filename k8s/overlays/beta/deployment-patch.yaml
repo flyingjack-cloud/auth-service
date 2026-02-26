@@ -3,12 +3,14 @@ kind: Deployment
 metadata:
   name: auth-service-v1
 spec:
-  replicas: 2
+  replicas: 1
   template:
     spec:
+      imagePullSecrets:
+        - name: harbor-pull-secret
       containers:
         - name: auth-service
-          image: registry.wms.com:8443/cloud/flyingjack-auth-service:1.0.0-SNAPSHOT
+          image: 192.168.31.162:8443/cloud/flyingjack-auth-service:1.0.0-SNAPSHOT
           imagePullPolicy: Always
           ports:
             - containerPort: 5005  # 调试端口

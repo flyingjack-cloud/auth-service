@@ -12,9 +12,9 @@ spec:
         protocol: HTTPS
       tls:
         mode: SIMPLE
-        credentialName: internal-tls # 与cert-manager创建的Secret一致
+        credentialName: internal-tls-cert # 与cert-manager创建的Secret一致
       hosts:
-        - "auth.flyingjack.top"
+        - "auth.flyingcloud.local"
 ---
 apiVersion: networking.istio.io/v1
 kind: VirtualService
@@ -22,7 +22,7 @@ metadata:
   name: auth-service
 spec:
   hosts:
-    - "auth.flyingjack.top"
+    - "auth.flyingcloud.local"
   gateways:
     - auth-gateway
   http:

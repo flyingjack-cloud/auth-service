@@ -73,14 +73,14 @@ public class AuthorizationServerConfig {
                                                                  CustomOAuth2ClientEntityRepository clientEntityRepository,
                                                                  ObjectMapper objectMapper) {
         // 先查找是否有存在的client，以clientId为准,如果没有id默认为0
-        String clientId = "gateway-client";
+        String clientId = "sample-client";
         RegisteredClient gatewayClient = RegisteredClient.withId("0") // 0表示由数据库生成
                 .clientId(clientId)
-                .clientSecret(passwordEncoder.encode("gateway-secret"))
+                .clientSecret(passwordEncoder.encode("sample-secret"))
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                .redirectUri("http://localhost:8089/callback")
+                .redirectUri("http://localhost:4300/callback")
                 .postLogoutRedirectUri("http://gateway/")
                 .scope("openid")
                 .clientSettings(ClientSettings.builder()

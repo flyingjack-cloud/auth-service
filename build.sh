@@ -9,7 +9,7 @@ DEFAULT_TAG=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
 
 # 2. 定义变量（请根据你的需要修改）
 DOCKER_IMAGE_NAME="flyingjack-auth-service"
-DOCKER_REGISTRY="registry.wms.com:8443/cloud"
+DOCKER_REGISTRY="192.168.31.162:8443/cloud"
 DOCKERFILE_PATH="."
 # 读取入参，如果没有传入，则使用默认值 'prod'
 MVN_PROFILE=${1:-beta}
