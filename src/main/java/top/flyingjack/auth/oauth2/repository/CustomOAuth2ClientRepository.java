@@ -58,4 +58,8 @@ public class CustomOAuth2ClientRepository implements RegisteredClientRepository 
     public RegisteredClient findByClientId(String clientId) {
         return clientEntityRepository.findByClientId(clientId).map(mapper::toDomain).orElse(null);
     }
+
+    public void deleteByClientId(String clientId) {
+        clientEntityRepository.deleteByClientId(clientId);
+    }
 }

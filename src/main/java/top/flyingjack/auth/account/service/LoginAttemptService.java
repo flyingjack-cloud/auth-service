@@ -9,11 +9,8 @@ import top.flyingjack.common.cache.CacheService;
  */
 @Service
 public class LoginAttemptService {
-    // 储存在缓存时，key的前缀
-    private final String HASH_KEY_HEADER = "LOGIN_ATTEMPT:";
-
-    // 观察窗口600s
-    private final long MONITOR_WINDOW = 600;
+    private static final String HASH_KEY_HEADER = "LOGIN_ATTEMPT:";
+    private static final long MONITOR_WINDOW = 600; // 观察窗口 600s
 
     private final CacheService cacheService;
 
@@ -22,54 +19,42 @@ public class LoginAttemptService {
     }
 
     /**
-     * 当登录失败时记录失败并返回当前失败次数
+     * 当登录失败时原子性地递增失败计数并返回当前值
      *
-     * @param principal 登录参数
-     * @param resetWindow 是否要重置过期时间
+     * @param principal    登录参数
+     * @param resetWindow  是否重置过期窗口
      */
     public int record(String principal, boolean resetWindow) {
         String key = key(principal);
-
-        int attempCount = 1;
-        if (cacheService.hasKey(key)) {
-            attempCount += (Integer) cacheService.get(key);
-        }
-
-        cacheService.set(key, attempCount);
-
-        if (resetWindow) {
+        // 使用 Redis INCR 原子递增，消除并发场景下的竞态条件
+        long count = cacheService.incr(key, 1);
+        // 首次记录时必须设置 TTL；resetWindow=true 时重置窗口
+        if (resetWindow || count == 1) {
             cacheService.expire(key, MONITOR_WINDOW);
         }
-
-        return attempCount;
+        return (int) count;
     }
 
     public int record(String principal) {
         return record(principal, true);
     }
 
-
     /**
-     * 如果记录信息存在，删除
+     * 登录成功后清除失败记录
      *
-     * @param principal 传入的参数
+     * @param principal 登录参数
      */
     public void clear(String principal) {
-        String key = key(principal);
-        if (cacheService.hasKey(key)) {
-            cacheService.del(key);
-        }
+        cacheService.del(key(principal));
     }
 
     public int count(String principal) {
-        String key = key(principal);
-        if (cacheService.hasKey(key)) {
-            return (Integer) cacheService.get(key);
-        }
-        return 0;
+        Object value = cacheService.get(key(principal));
+        if (value == null) return 0;
+        return ((Number) value).intValue(); // 兼容 Integer 和 Long 返回类型
     }
 
-    public long expireRemain(String principal){
+    public long expireRemain(String principal) {
         String key = key(principal);
         if (cacheService.hasKey(key)) {
             return cacheService.getExpire(key);

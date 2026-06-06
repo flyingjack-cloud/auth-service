@@ -9,6 +9,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import top.flyingjack.auth.config.SnowflakeIdGenerator;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.HashSet;
@@ -23,7 +25,9 @@ import java.util.stream.Collectors;
  */
 @Entity
 @Table(name = "auth_users")
-public class AuthUser implements UserDetails {
+public class AuthUser implements UserDetails, Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(generator = "snowflake-id-generator")
     @GenericGenerator(name = "snowflake-id-generator", type = SnowflakeIdGenerator.class)
@@ -136,6 +140,10 @@ public class AuthUser implements UserDetails {
         this.password = password;
     }
 
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
@@ -154,6 +162,10 @@ public class AuthUser implements UserDetails {
 
     public void setCredentialsNonExpired(boolean credentialsNonExpired) {
         this.credentialsNonExpired = credentialsNonExpired;
+    }
+
+    public Set<Role> getRoles() {
+        return roles;
     }
 
     public void setRoles(Set<Role> roles) {

@@ -106,6 +106,9 @@ public class LoginAuthenticationProvider implements AuthenticationProvider, Init
         this.credentialAuthenticationChecks(user, (UsernamePasswordAuthenticationToken) authentication);
         this.postAuthenticationChecks.check(user);
 
+        // 所有验证通过，登录成功，清除失败计数（此处原始 principal 字符串仍在 authentication 中）
+        this.loginAttemptService.clear(authentication.getPrincipal().toString());
+
         return createSuccessAuthentication(user, authentication, user);
     }
 
@@ -177,9 +180,9 @@ public class LoginAuthenticationProvider implements AuthenticationProvider, Init
                     SysErrorMsgTool.fromError(ErrorCode.BAD_CREDENTIAL, "User Not found")
             );
         } catch (InternalAuthenticationServiceException ex) {
-            logger.debug("User {} not found.", principal);
-            throw new UsernameNotFoundException(
-                    SysErrorMsgTool.fromError(ErrorCode.BAD_CREDENTIAL, "User Not found"));
+            // 内部服务异常不能掩盖为"用户未找到"，直接向上抛出以便正确处理和告警
+            logger.error("Internal error while loading user {}: {}", principal, ex.getMessage());
+            throw ex;
         } catch (Exception ex) {
             throw new InternalAuthenticationServiceException(ex.getMessage(), ex);
         }

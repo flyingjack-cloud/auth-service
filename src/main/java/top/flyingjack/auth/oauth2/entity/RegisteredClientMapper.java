@@ -68,7 +68,9 @@ public class RegisteredClientMapper {
      */
     public CustomOauth2ClientEntity toEntity(RegisteredClient registeredClient) {
         CustomOauth2ClientEntity entity = new CustomOauth2ClientEntity();
-        entity.setId(Long.valueOf(registeredClient.getId()));
+        // id="0" 约定为"由数据库自动生成"，必须保持 null 才能触发 GenerationType.IDENTITY
+        String rawId = registeredClient.getId();
+        entity.setId("0".equals(rawId) ? null : Long.valueOf(rawId));
         entity.setClientId(registeredClient.getClientId());
         entity.setClientIdIssuedAt(registeredClient.getClientIdIssuedAt() == null ? Instant.now() :
                 registeredClient.getClientIdIssuedAt());

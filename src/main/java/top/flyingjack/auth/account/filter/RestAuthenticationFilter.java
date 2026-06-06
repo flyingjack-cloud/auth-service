@@ -91,9 +91,9 @@ public class RestAuthenticationFilter extends UsernamePasswordAuthenticationFilt
                 // 实际验证过程
                 boolean result = this.captchaClient.verify(new CaptchaRequest(captchaId, captchaToken));
 
-                // 如果验证码验证成功了，清除记录，继续其他filter流程
+                // 验证码通过则继续，失败计数由 LoginAuthenticationProvider 在密码验证成功后才清除
                 if (result) {
-                    this.loginAttemptService.clear(userLoginDto.principal());
+                    // 不在此处清除失败计数，防止攻击者通过"解验证码+继续爆破"绕过防护
                 } else {
                     this.loginAttemptService.record(userLoginDto.principal());
                     throw new CaptchaAuthenticationException("Captcha verify failed");
