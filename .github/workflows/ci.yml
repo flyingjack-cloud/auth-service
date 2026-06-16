@@ -1,0 +1,88 @@
+name: Auth Service CI
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths-ignore:
+      - 'k8s/**'
+      - '**.md'
+
+jobs:
+  build-and-push:
+    runs-on: self-hosted
+
+    steps:
+      # Step 1: 生成 GitHub App 临时 token，用于后续所有私有仓库的访问
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: flyingjack-cloud
+
+      # Step 2: 先 checkout 根仓库，获得 parent POM 和 mvnw
+      # submodules: false 避免 git 尝试 init 所有子模块
+      - name: Checkout flyingjack-cloud root
+        uses: actions/checkout@v4
+        with:
+          repository: flyingjack-cloud/flyingjack-cloud
+          token: ${{ steps.app-token.outputs.token }}
+          submodules: false
+
+      # Step 3: 将本次触发的 auth-service commit checkout 到 auth-service/ 目录
+      # 不指定 repository，默认为当前触发仓库（auth-service）
+      - name: Checkout auth-service
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: auth-service
+          token: ${{ steps.app-token.outputs.token }}
+
+      # Step 4: checkout common-lib，使用与当前触发分支同名的分支
+      # develop 触发 → common-lib develop，main 触发 → common-lib main
+      - name: Checkout common-lib (latest)
+        uses: actions/checkout@v4
+        with:
+          repository: flyingjack-cloud/common-lib
+          token: ${{ steps.app-token.outputs.token }}
+          path: common-lib
+          ref: ${{ github.ref_name }}
+
+      # Step 4: 确保 mvnw 有执行权限（checkout 后可能丢失 +x）
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
+      # Step 5: 从分支名推导 Maven profile 和镜像 tag 前缀
+      - name: Set build variables
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "PROFILE=beta" >> $GITHUB_ENV
+          else
+            echo "PROFILE=dev" >> $GITHUB_ENV
+          fi
+          echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      # Step 6: 安装 common-lib 到本地 Maven 仓库
+      # -f 直接指向模块 pom.xml，Maven 只将根 pom 作为 parent 读取，
+      # 不扫描 <modules> 列表，避免缺失的其他子模块导致报错
+      - name: Install common-lib
+        run: ./mvnw install -f common-lib/pom.xml -DskipTests -Dspring-boot.repackage.skip=true -q
+
+      # Step 7: 构建并测试 auth-service（含 TestContainers，需要 Docker daemon）
+      - name: Build and test auth-service
+        run: ./mvnw clean verify -f auth-service/pom.xml -P ${{ env.PROFILE }}
+
+      # Step 8: 构建镜像
+      - name: Docker build
+        run: |
+          docker build \
+            -t ${{ secrets.REGISTRY_URL }}/auth-service:${{ env.PROFILE }}-${{ env.SHORT_SHA }} \
+            auth-service/
+
+      # Step 9: 推送到自建 registry（registry:2，无需登录）
+      - name: Docker push
+        run: |
+          docker push ${{ secrets.REGISTRY_URL }}/auth-service:${{ env.PROFILE }}-${{ env.SHORT_SHA }}

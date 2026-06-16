@@ -1,9 +1,8 @@
 # no secret
 **/*.secret
 
-# 环境配置
+# 环境配置（含本地数据库地址，不提交）
 application-dev.*
-application-test.*
 
 #通过以下两行配置，忽略根目录和子模块的target文件夹编译文件
 target/

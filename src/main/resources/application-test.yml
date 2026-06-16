@@ -1,0 +1,21 @@
+server:
+  port: 9090
+
+spring:
+  web:
+    locale: en_US
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data-test.sql
+  # 关闭根据JPA实体自动创建表
+  jpa:
+    hibernate:
+      ddl-auto: none
+    defer-datasource-initialization: false
+    show-sql: true
+
+# 雪花ID配置
+snowflake:
+  datacenter-id: node-1
+  machine-id: pod-1
