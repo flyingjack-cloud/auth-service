@@ -8,6 +8,7 @@ on:
     paths-ignore:
       - 'k8s/**'
       - '**.md'
+  workflow_dispatch:
 
 jobs:
   build-and-push:
@@ -15,6 +16,7 @@ jobs:
 
     steps:
       # Step 1: 生成 GitHub App 临时 token，用于后续所有私有仓库的访问
+      # repositories 明确列出所有需要访问的仓库（App 必须已安装到这些仓库）
       - name: Generate GitHub App token
         id: app-token
         uses: actions/create-github-app-token@v1
@@ -22,6 +24,7 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: flyingjack-cloud
+          repositories: auth-service,common-lib,flyingjack-cloud,k8s-gitops
 
       # Step 2: 先 checkout 根仓库，获得 parent POM 和 mvnw
       # submodules: false 避免 git 尝试 init 所有子模块
@@ -56,12 +59,13 @@ jobs:
         run: chmod +x mvnw
 
       # Step 5: 从分支名推导 Maven profile 和镜像 tag 前缀
+      # develop → beta，main → prod
       - name: Set build variables
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "PROFILE=beta" >> $GITHUB_ENV
+            echo "PROFILE=prod" >> $GITHUB_ENV
           else
-            echo "PROFILE=dev" >> $GITHUB_ENV
+            echo "PROFILE=beta" >> $GITHUB_ENV
           fi
           echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
@@ -82,7 +86,40 @@ jobs:
             -t ${{ secrets.REGISTRY_URL }}/auth-service:${{ env.PROFILE }}-${{ env.SHORT_SHA }} \
             auth-service/
 
-      # Step 9: 推送到自建 registry（registry:2，无需登录）
+      # Step 9: 登录 registry（仅当 REGISTRY_USERNAME 已配置时执行）
+      # 无认证的 registry:2 不需要设置该 secret，此步骤自动跳过
+      - name: Docker login
+        run: |
+          if [ -n "${{ secrets.REGISTRY_USERNAME }}" ]; then
+            echo "${{ secrets.REGISTRY_PASSWORD }}" | \
+              docker login ${{ secrets.REGISTRY_URL }} \
+              -u ${{ secrets.REGISTRY_USERNAME }} --password-stdin
+          else
+            echo "REGISTRY_USERNAME not set, skipping login (unauthenticated registry)"
+          fi
+
+      # Step 10: 推送镜像
       - name: Docker push
         run: |
           docker push ${{ secrets.REGISTRY_URL }}/auth-service:${{ env.PROFILE }}-${{ env.SHORT_SHA }}
+
+      # Step 11: 更新 gitops 仓库镜像 tag，触发 ArgoCD 同步
+      # develop → beta overlay，main → prod overlay
+      - name: Update gitops image tag
+        env:
+          GITOPS_TOKEN: ${{ steps.app-token.outputs.token }}
+          IMAGE: ${{ secrets.REGISTRY_URL }}/auth-service:${{ env.PROFILE }}-${{ env.SHORT_SHA }}
+          OVERLAY: auth-service/overlays/${{ env.PROFILE }}
+        run: |
+          git clone https://x-access-token:${GITOPS_TOKEN}@github.com/flyingjack-cloud/k8s-gitops.git
+          cd k8s-gitops
+          sed -i "s|image: .*auth-service.*|image: ${IMAGE}|" "${OVERLAY}/deployment-patch.yaml"
+          git config user.email "ci@flyingjack.com"
+          git config user.name "CI Bot"
+          git add "${OVERLAY}/deployment-patch.yaml"
+          if git diff --cached --quiet; then
+            echo "Image tag unchanged, nothing to push"
+          else
+            git commit -m "chore(auth-service): update image to ${{ env.PROFILE }}-${{ env.SHORT_SHA }}"
+            git push
+          fi
