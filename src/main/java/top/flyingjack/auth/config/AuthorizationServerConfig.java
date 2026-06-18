@@ -81,30 +81,36 @@ public class AuthorizationServerConfig {
             @Value("${auth.oauth2.gateway-client.client-secret}") String clientSecret,
             @Value("${auth.oauth2.gateway-client.redirect-uri}") String redirectUri
     ) {
-        RegisteredClient gatewayClient = RegisteredClient.withId("0")
-                .clientId(clientId)
-                .clientSecret(passwordEncoder.encode(clientSecret))
-                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                .redirectUri(redirectUri)
-                .postLogoutRedirectUri("http://gateway/")
-                .scope("openid")
-                .clientSettings(ClientSettings.builder()
-                        .requireProofKey(true)
-                        .requireAuthorizationConsent(false)
-                        .build()
-                )
-                .tokenSettings(TokenSettings
-                        .builder().accessTokenTimeToLive(Duration.ofHours(2))
-                        .refreshTokenTimeToLive(Duration.ofDays(7))
-                        .build()
-                )
-                .build();
-
         CustomOAuth2ClientRepository repository = new CustomOAuth2ClientRepository(clientEntityRepository,
                 objectMapper);
-        repository.save(gatewayClient);
+
+        // Bootstrap a default client only when the DB has no clients at all.
+        // After first boot, all client management goes through the admin API.
+        if (clientEntityRepository.count() == 0) {
+            RegisteredClient bootstrapClient = RegisteredClient.withId("0")
+                    .clientId(clientId)
+                    .clientSecret(passwordEncoder.encode(clientSecret))
+                    .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                    .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                    .redirectUri(redirectUri)
+                    .postLogoutRedirectUri("http://gateway/")
+                    .scope("openid")
+                    .clientSettings(ClientSettings.builder()
+                            .requireProofKey(true)
+                            .requireAuthorizationConsent(false)
+                            .build()
+                    )
+                    .tokenSettings(TokenSettings
+                            .builder().accessTokenTimeToLive(Duration.ofHours(2))
+                            .refreshTokenTimeToLive(Duration.ofDays(7))
+                            .build()
+                    )
+                    .build();
+            repository.save(bootstrapClient);
+            log.info("No OAuth2 clients found — bootstrapped default client '{}'", clientId);
+        }
+
         return repository;
     }
 
