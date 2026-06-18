@@ -104,15 +104,14 @@ jobs:
           docker push ${{ secrets.REGISTRY_URL }}/auth-service:${{ env.PROFILE }}-${{ env.SHORT_SHA }}
 
       # Step 11: 更新 gitops 仓库镜像 tag，触发 ArgoCD 同步
-      # 与触发分支保持一致：develop → gitops develop，main → gitops main
+      # develop → beta overlay，main → prod overlay
       - name: Update gitops image tag
         env:
           GITOPS_TOKEN: ${{ steps.app-token.outputs.token }}
           IMAGE: ${{ secrets.REGISTRY_URL }}/auth-service:${{ env.PROFILE }}-${{ env.SHORT_SHA }}
           OVERLAY: auth-service/overlays/${{ env.PROFILE }}
-          GITOPS_BRANCH: ${{ github.ref_name }}
         run: |
-          git clone --branch ${GITOPS_BRANCH} https://x-access-token:${GITOPS_TOKEN}@github.com/flyingjack-cloud/k8s-gitops.git
+          git clone https://x-access-token:${GITOPS_TOKEN}@github.com/flyingjack-cloud/k8s-gitops.git
           cd k8s-gitops
           sed -i "s|image: .*auth-service.*|image: ${IMAGE}|" "${OVERLAY}/deployment-patch.yaml"
           git config user.email "ci@flyingjack.com"
@@ -122,5 +121,5 @@ jobs:
             echo "Image tag unchanged, nothing to push"
           else
             git commit -m "chore(auth-service): update image to ${{ env.PROFILE }}-${{ env.SHORT_SHA }}"
-            git push origin ${GITOPS_BRANCH}
+            git push
           fi
