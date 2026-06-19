@@ -20,11 +20,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-kubernetes-client-config</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
@@ -173,13 +168,10 @@
                         <directory>src/main/resources</directory>
                         <excludes>
                             <exclude>application-dev.yml</exclude>
-                            <exclude>application-beta.yml</exclude>
                             <exclude>application-prod.yml</exclude>
                             <exclude>application-dev.yaml</exclude>
-                            <exclude>application-beta.yaml</exclude>
                             <exclude>application-prod.yaml</exclude>
                             <exclude>application-dev.properties</exclude>
-                            <exclude>application-beta.properties</exclude>
                             <exclude>application-prod.properties</exclude>
                         </excludes>
                     </resource>
@@ -199,13 +191,10 @@
                         <excludes>
                             <exclude>application-dev.yml</exclude>
                             <exclude>application-beta.yml</exclude>
-                            <exclude>application-prod.yml</exclude>
                             <exclude>application-dev.yaml</exclude>
                             <exclude>application-beta.yaml</exclude>
-                            <exclude>application-prod.yaml</exclude>
                             <exclude>application-dev.properties</exclude>
                             <exclude>application-beta.properties</exclude>
-                            <exclude>application-prod.properties</exclude>
                         </excludes>
                     </resource>
                 </resources>
