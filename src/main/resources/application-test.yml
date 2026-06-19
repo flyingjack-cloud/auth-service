@@ -4,6 +4,15 @@ server:
 spring:
   web:
     locale: en_US
+  # 覆盖 application.yml 中的 ${DB_URL} 占位符，实际连接由 @DynamicPropertySource 注入
+  datasource:
+    url: jdbc:postgresql://localhost:5432/test
+    username: test
+    password: test
+  data:
+    redis:
+      host: localhost
+      password: ""
   sql:
     init:
       mode: always

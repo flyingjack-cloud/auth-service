@@ -7,14 +7,7 @@ spring: # 不要设置spring.application.name不然k8s默认{application-name}.y
         # 默认会调用pod的namespace，也可以用下面的手动获取
         # namespace: ${SPRING_PROFILES_ACTIVE:default}
       secrets:
-        enabled: true
-        enable-api: true
-        fail-fast: true
-        sources:
-          - labels:
-              secret.group: auth-connect
-          - labels:
-              secret.group: cache-access-secret
+        enabled: false  # 通过 deployment envFrom 注入，不依赖 k8s API
       reload:
         enabled: true
         mode: polling
