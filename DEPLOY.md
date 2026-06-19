@@ -4,7 +4,9 @@
 
 本服务通过 ArgoCD GitOps 部署，k8s 配置由 `k8s-gitops` 仓库管理。**Secrets 不进 GitOps 仓库**，需在目标集群手动提前创建；ArgoCD 只管理 Deployment / ConfigMap / Service 等无密态资源。
 
-Spring Cloud Kubernetes 通过 `secret.group` 标签自动发现 Secret 并注入环境变量，因此手动创建时标签必须正确设置。
+所有敏感配置通过 `envFrom: secretRef` 注入为 OS 环境变量，服务启动时由 Spring Boot 读取，不依赖 Spring Cloud Kubernetes API。
+
+**TLS 证书**通过 cert-manager 手动申请，不走 ArgoCD 管理（cert-manager 自动续签，无需 GitOps 介入）。
 
 ---
 
@@ -22,21 +24,16 @@ kubectl create secret generic auth-connect \
   --from-literal=DB_USER=postgres \
   --from-literal=DB_PASSWORD=<实际密码> \
   --from-literal=RSA_PRIVATE_KEY=<Base64编码的PKCS8私钥> \
-  --from-literal=CORS_ALLOWED_ORIGINS=http://<beta域名> \
+  --from-literal=CORS_ALLOWED_ORIGINS=https://beta-auth.flyingjack.top \
   -n flyingjack-beta \
   --dry-run=client -o yaml | kubectl apply -f -
-
-# 追加标签（Spring Cloud Kubernetes 通过此标签发现 Secret）
-kubectl label secret auth-connect secret.group=auth-connect -n flyingjack-beta --overwrite
 
 # Redis 凭据
 kubectl create secret generic cache-access-secret \
-  --from-literal=REDIS_HOST=beta.flyingcloud.local \
+  --from-literal=REDIS_HOST=<beta Redis地址> \
   --from-literal=REDIS_PASSWORD=<Redis密码，无密码则留空字符串> \
   -n flyingjack-beta \
   --dry-run=client -o yaml | kubectl apply -f -
-
-kubectl label secret cache-access-secret secret.group=cache-access-secret -n flyingjack-beta --overwrite
 ```
 
 ### Prod 环境
@@ -49,19 +46,15 @@ kubectl create secret generic auth-connect \
   --from-literal=DB_USER=<prod数据库用户> \
   --from-literal=DB_PASSWORD=<prod数据库密码> \
   --from-literal=RSA_PRIVATE_KEY=<Base64编码的PKCS8私钥> \
-  --from-literal=CORS_ALLOWED_ORIGINS=https://<prod域名> \
+  --from-literal=CORS_ALLOWED_ORIGINS=https://auth.flyingjack.top \
   -n flyingjack-prod \
   --dry-run=client -o yaml | kubectl apply -f -
-
-kubectl label secret auth-connect secret.group=auth-connect -n flyingjack-prod --overwrite
 
 kubectl create secret generic cache-access-secret \
   --from-literal=REDIS_HOST=<prod Redis地址> \
   --from-literal=REDIS_PASSWORD=<prod Redis密码> \
   -n flyingjack-prod \
   --dry-run=client -o yaml | kubectl apply -f -
-
-kubectl label secret cache-access-secret secret.group=cache-access-secret -n flyingjack-prod --overwrite
 ```
 
 ### 镜像仓库拉取凭据（仅认证 registry 需要）
@@ -117,6 +110,61 @@ kubectl get secret -n flyingjack-prod -l secret.group=cache-access-secret
 kubectl get secret auth-connect -n flyingjack-prod -o jsonpath='{.data}' | python3 -c "import sys,json; [print(k) for k in json.load(sys.stdin)]"
 kubectl get secret cache-access-secret -n flyingjack-prod -o jsonpath='{.data}' | python3 -c "import sys,json; [print(k) for k in json.load(sys.stdin)]"
 ```
+
+---
+
+## 手动申请 TLS 证书（首次部署时执行）
+
+cert-manager Certificate 资源不走 ArgoCD 管理，需手动在 `istio-system` 命名空间申请一次，之后 cert-manager 自动续签。
+
+### Beta 环境
+
+```bash
+# 如之前错误地在 flyingjack-beta 创建了 Certificate，先清理
+kubectl delete certificate beta-auth-flyingjack-top-tls -n flyingjack-beta --ignore-not-found
+
+# 在 istio-system 申请证书
+kubectl apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: beta-auth-flyingjack-top-tls
+  namespace: istio-system
+spec:
+  secretName: beta-auth-flyingjack-top-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - beta-auth.flyingjack.top
+EOF
+
+# 等待签发完成（READY 变为 True）
+kubectl get certificate beta-auth-flyingjack-top-tls -n istio-system -w
+```
+
+### Prod 环境
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: auth-flyingjack-top-tls
+  namespace: istio-system
+spec:
+  secretName: auth-flyingjack-top-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - auth.flyingjack.top
+EOF
+
+kubectl get certificate auth-flyingjack-top-tls -n istio-system -w
+```
+
+> 证书签发依赖 DNS 已解析到集群入口 IP，Let's Encrypt 能从公网访问对应域名。
 
 ---
 
