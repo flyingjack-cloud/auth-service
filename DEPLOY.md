@@ -17,7 +17,7 @@ Spring Cloud Kubernetes 通过 `secret.group` 标签自动发现 Secret 并注�
 kubectl create namespace flyingjack-beta --dry-run=client -o yaml | kubectl apply -f -
 
 # 数据库 & 服务连接凭据
-kubectl create secret generic auth-connect-secret \
+kubectl create secret generic auth-connect \
   --from-literal=DB_URL=jdbc:postgresql://beta.flyingcloud.local:5432/auth \
   --from-literal=DB_USER=postgres \
   --from-literal=DB_PASSWORD=<实际密码> \
@@ -27,16 +27,16 @@ kubectl create secret generic auth-connect-secret \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # 追加标签（Spring Cloud Kubernetes 通过此标签发现 Secret）
-kubectl label secret auth-connect-secret secret.group=auth-connect -n flyingjack-beta --overwrite
+kubectl label secret auth-connect secret.group=auth-connect -n flyingjack-beta --overwrite
 
 # Redis 凭据
-kubectl create secret generic redis-access-secret \
+kubectl create secret generic cache-access-secret \
   --from-literal=REDIS_HOST=beta.flyingcloud.local \
   --from-literal=REDIS_PASSWORD=<Redis密码，无密码则留空字符串> \
   -n flyingjack-beta \
   --dry-run=client -o yaml | kubectl apply -f -
 
-kubectl label secret redis-access-secret secret.group=cache-access-secret -n flyingjack-beta --overwrite
+kubectl label secret cache-access-secret secret.group=cache-access-secret -n flyingjack-beta --overwrite
 ```
 
 ### Prod 环境
@@ -44,7 +44,7 @@ kubectl label secret redis-access-secret secret.group=cache-access-secret -n fly
 ```bash
 kubectl create namespace flyingjack-prod --dry-run=client -o yaml | kubectl apply -f -
 
-kubectl create secret generic auth-connect-secret \
+kubectl create secret generic auth-connect \
   --from-literal=DB_URL=jdbc:postgresql://prod.flyingcloud.local:5432/auth \
   --from-literal=DB_USER=<prod数据库用户> \
   --from-literal=DB_PASSWORD=<prod数据库密码> \
@@ -53,15 +53,15 @@ kubectl create secret generic auth-connect-secret \
   -n flyingjack-prod \
   --dry-run=client -o yaml | kubectl apply -f -
 
-kubectl label secret auth-connect-secret secret.group=auth-connect -n flyingjack-prod --overwrite
+kubectl label secret auth-connect secret.group=auth-connect -n flyingjack-prod --overwrite
 
-kubectl create secret generic redis-access-secret \
+kubectl create secret generic cache-access-secret \
   --from-literal=REDIS_HOST=<prod Redis地址> \
   --from-literal=REDIS_PASSWORD=<prod Redis密码> \
   -n flyingjack-prod \
   --dry-run=client -o yaml | kubectl apply -f -
 
-kubectl label secret redis-access-secret secret.group=cache-access-secret -n flyingjack-prod --overwrite
+kubectl label secret cache-access-secret secret.group=cache-access-secret -n flyingjack-prod --overwrite
 ```
 
 ### 镜像仓库拉取凭据（仅认证 registry 需要）
@@ -94,13 +94,28 @@ grep -v "^-----" private_pkcs8.pem | tr -d '\n'
 
 ## 验证 Secrets 是否正确
 
+### Beta 环境
+
 ```bash
 # 检查 secret 存在且标签正确
 kubectl get secret -n flyingjack-beta -l secret.group=auth-connect
 kubectl get secret -n flyingjack-beta -l secret.group=cache-access-secret
 
 # 查看 secret 的 key（不显示值）
-kubectl get secret auth-connect-secret -n flyingjack-beta -o jsonpath='{.data}' | python3 -c "import sys,json; [print(k) for k in json.load(sys.stdin)]"
+kubectl get secret auth-connect -n flyingjack-beta -o jsonpath='{.data}' | python3 -c "import sys,json; [print(k) for k in json.load(sys.stdin)]"
+kubectl get secret cache-access-secret -n flyingjack-beta -o jsonpath='{.data}' | python3 -c "import sys,json; [print(k) for k in json.load(sys.stdin)]"
+```
+
+### Prod 环境
+
+```bash
+# 检查 secret 存在且标签正确
+kubectl get secret -n flyingjack-prod -l secret.group=auth-connect
+kubectl get secret -n flyingjack-prod -l secret.group=cache-access-secret
+
+# 查看 secret 的 key（不显示值）
+kubectl get secret auth-connect -n flyingjack-prod -o jsonpath='{.data}' | python3 -c "import sys,json; [print(k) for k in json.load(sys.stdin)]"
+kubectl get secret cache-access-secret -n flyingjack-prod -o jsonpath='{.data}' | python3 -c "import sys,json; [print(k) for k in json.load(sys.stdin)]"
 ```
 
 ---
