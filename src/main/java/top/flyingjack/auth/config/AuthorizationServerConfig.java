@@ -183,8 +183,15 @@ public class AuthorizationServerConfig {
         return OAuth2AuthorizationServerConfiguration.jwtDecoder(jwkSource);
     }
 
+    @Value("${auth.issuer:}")
+    private String issuer;
+
     @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
-        return AuthorizationServerSettings.builder().build();
+        AuthorizationServerSettings.Builder builder = AuthorizationServerSettings.builder();
+        if (StringUtils.hasText(issuer)) {
+            builder.issuer(issuer);
+        }
+        return builder.build();
     }
 }
