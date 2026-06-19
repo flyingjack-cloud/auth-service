@@ -95,7 +95,7 @@ public class SecurityConfig {
         Arrays.stream(allowedOriginsStr.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
-                .forEach(configuration::addAllowedOrigin);
+                .forEach(configuration::addAllowedOriginPattern);
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true); // Session cookie 跨域需要
