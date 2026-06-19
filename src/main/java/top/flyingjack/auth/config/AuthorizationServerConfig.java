@@ -144,7 +144,7 @@ public class AuthorizationServerConfig {
      */
     private static KeyPair loadRsaKey(String base64PrivateKey) {
         try {
-            byte[] keyBytes = Base64.getDecoder().decode(base64PrivateKey.trim());
+            byte[] keyBytes = Base64.getMimeDecoder().decode(base64PrivateKey);
             KeyFactory factory = KeyFactory.getInstance("RSA");
             RSAPrivateCrtKey privateKey = (RSAPrivateCrtKey) factory.generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
             RSAPublicKey publicKey = (RSAPublicKey) factory.generatePublic(
