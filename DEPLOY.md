@@ -117,6 +117,8 @@ kubectl get secret cache-access-secret -n flyingjack-prod -o jsonpath='{.data}' 
 
 cert-manager Certificate 资源不走 ArgoCD 管理，需手动在 `istio-system` 命名空间申请一次，之后 cert-manager 自动续签。
 
+> **关于 HTTP→HTTPS 重定向**：Istio Gateway 未配置 `httpsRedirect`，这是有意为之。cert-manager 使用 HTTP-01 方式验证域名，若开启重定向会导致每次续签时 ACME challenge 被 301 拦截，形成死锁。auth-service 的 OAuth2 客户端均通过注册的 HTTPS redirect_uri 访问，不依赖 HTTP 自动跳转。
+
 ### Beta 环境
 
 ```bash
