@@ -115,7 +115,7 @@ jobs:
           IMAGE: ${{ secrets.REGISTRY_URL }}/auth-service:${{ env.PROFILE }}-${{ env.SHORT_SHA }}
           OVERLAY: auth-service/overlays/${{ env.PROFILE }}
         run: |
-          git clone https://oauth2:${GITEE_TOKEN}@gitee.com/flyingjack-cloud/k8s-gitops.git
+          git clone https://oauth2:${GITEE_TOKEN}@gitee.com/zuminli/k8s-gitops.git
           cd k8s-gitops
           sed -i "s|image: .*auth-service.*|image: ${IMAGE}|" "${OVERLAY}/deployment-patch.yaml"
           git config user.email "ci@flyingjack.com"
