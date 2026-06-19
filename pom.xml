@@ -8,7 +8,7 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <artifactId>auth</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
     <name>auth</name>
     <description>auth</description>
     <packaging>jar</packaging>
@@ -16,7 +16,30 @@
     <dependencies>
         <dependency>
             <groupId>top.flyingjack</groupId>
-            <artifactId>common</artifactId>
+            <artifactId>common-lib</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- Sentinel 服务治理 -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.csp</groupId>
+            <artifactId>sentinel-datasource-nacos</artifactId>
+        </dependency>
+
+        <!-- Postgresql Driver -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- Spring Data JPA ORM支持 -->
@@ -29,23 +52,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
-        </dependency>
-
-        <!-- openfeign 服务间调用 -->
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-openfeign</artifactId>
-        </dependency>
-
-        <!-- Sentinel 服务治理 -->
-        <dependency>
-            <groupId>com.alibaba.cloud</groupId>
-            <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.alibaba.csp</groupId>
-            <artifactId>sentinel-datasource-nacos</artifactId>
         </dependency>
 
         <!-- 确保Jackson Instant 模块已经按照 -->
@@ -128,7 +134,77 @@
         </dependency>
     </dependencies>
 
+    <profiles>
+        <!-- 开发环境 -->
+        <profile>
+            <id>dev</id>
+            <activation>
+                <!--默认使用dev-->
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <active.profile>dev</active.profile>
+            </properties>
+            <build>
+                <resources>
+                    <resource>
+                        <directory>src/main/resources</directory>
+                        <excludes>
+                            <exclude>bootstrap.yml</exclude>
+                        </excludes>
+                    </resource>
+                </resources>
+            </build>
+        </profile>
+        <!-- beta环境 -->
+        <profile>
+            <id>beta</id>
+            <properties>
+                <active.profile>beta</active.profile>
+            </properties>
+            <build>
+                <resources>
+                    <resource>
+                        <directory>src/main/resources</directory>
+                        <excludes>
+                            <exclude>application-dev.yml</exclude>
+                            <exclude>application-prod.yml</exclude>
+                            <exclude>application-dev.yaml</exclude>
+                            <exclude>application-prod.yaml</exclude>
+                            <exclude>application-dev.properties</exclude>
+                            <exclude>application-prod.properties</exclude>
+                        </excludes>
+                    </resource>
+                </resources>
+            </build>
+        </profile>
+        <!-- 生产环境 -->
+        <profile>
+            <id>prod</id>
+            <properties>
+                <active.profile>prod</active.profile>
+            </properties>
+            <build>
+                <resources>
+                    <resource>
+                        <directory>src/main/resources</directory>
+                        <excludes>
+                            <exclude>application-dev.yml</exclude>
+                            <exclude>application-beta.yml</exclude>
+                            <exclude>application-dev.yaml</exclude>
+                            <exclude>application-beta.yaml</exclude>
+                            <exclude>application-dev.properties</exclude>
+                            <exclude>application-beta.properties</exclude>
+                        </excludes>
+                    </resource>
+                </resources>
+            </build>
+        </profile>
+    </profiles>
+
     <build>
+        <finalName>${project.artifactId}-${project.version}-${active.profile}</finalName>
+
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -136,5 +212,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

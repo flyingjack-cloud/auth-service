@@ -1,5 +1,7 @@
 package top.flyingjack.auth.config;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,57 +27,83 @@ import top.flyingjack.auth.account.other.LoginAuthenticationProvider;
 import top.flyingjack.auth.account.service.LoginAttemptService;
 import top.flyingjack.auth.account.service.LoginUserDetailService;
 
+import java.util.Arrays;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
     @Bean
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http,
                                                           CorsConfigurationSource corsConfigurationSource,
                                                           JsonAccessDeniedHandler jsonAccessDeniedHandler,
-                                                          JsonAuthenticationEntryPoint jsonAuthenticationEntryPoint
+                                                          JsonAuthenticationEntryPoint jsonAuthenticationEntryPoint,
+                                                          UsernamePasswordAuthenticationFilter restAuthenticationFilter
     )
             throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable) // 不使用表单登录，关闭csrf
-                .cors(cors -> cors.configurationSource(corsConfigurationSource)) // 设置跨域，这样前端的host就可以直接访问登录了
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests((authorize) -> authorize
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**")
-                        .permitAll() // 放行doc相关接口
-                        .requestMatchers("/account/**", "/oauth2/**", "/.well-know/**")
-                        .permitAll() // 放行account和oauth2端口
+                        .permitAll()
+                        .requestMatchers("/actuator/**")
+                        .permitAll()
+                        // 公开端点：登录/登出/注册/忘记密码/状态检查
+                        .requestMatchers(
+                                "/account/login", "/account/logout", "/account/check-login",
+                                "/account/check/**", "/account/register", "/account/reset-password")
+                        .permitAll()
+                        // OAuth2 AS 端点全部公开（框架自身负责客户端认证）
+                        .requestMatchers("/oauth2/**", "/.well-known/**")
+                        .permitAll()
+                        // /account/profile, /account/change-password, /admin/** 等需要认证
                         .anyRequest()
                         .authenticated()
                 )
-                // 统一的错误处理
                 .exceptionHandling((exceptions) -> exceptions
-                        // 授权异常处理（403） - 用户已认证但权限不足时
                         .accessDeniedHandler(jsonAccessDeniedHandler)
-                        // 认证异常处理（401） - 用户未认证时访问限制资源
                         .authenticationEntryPoint(jsonAuthenticationEntryPoint)
                 )
-                // 关闭默认的表单和basic登录
                 .formLogin(AbstractHttpConfigurer::disable)
-                .httpBasic(AbstractHttpConfigurer::disable);
+                .httpBasic(AbstractHttpConfigurer::disable)
+                // 将 RestAuthenticationFilter 注册到 Spring Security 过滤链的正确位置
+                .addFilterAt(restAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
+    /**
+     * 防止 Spring Boot 将 RestAuthenticationFilter 再次自动注册到 Servlet 容器过滤链（避免双重执行）
+     */
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public FilterRegistrationBean<UsernamePasswordAuthenticationFilter> restAuthenticationFilterRegistration(
+            UsernamePasswordAuthenticationFilter restAuthenticationFilter
+    ) {
+        FilterRegistrationBean<UsernamePasswordAuthenticationFilter> registration =
+                new FilterRegistrationBean<>(restAuthenticationFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${auth.cors.allowed-origins}") String allowedOriginsStr
+    ) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOrigin("*"); // TODO 正式环境应当改为前端的host
+        Arrays.stream(allowedOriginsStr.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .forEach(configuration::addAllowedOriginPattern);
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
+        configuration.setAllowCredentials(true); // Session cookie 跨域需要
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 
-
-    /**
-     * 登录流程关键Filter，确保解析LoginRequest
-     */
     @Bean
     public UsernamePasswordAuthenticationFilter restAuthenticationFilter(
             AuthenticationManager authenticationManager,
@@ -86,12 +114,11 @@ public class SecurityConfig {
     ) {
         RestAuthenticationFilter filter = new RestAuthenticationFilter();
         filter.setAuthenticationManager(authenticationManager);
-        filter.setFilterProcessesUrl("/account/login"); // 哪个endpoints需要使用这个filter - 即登录接口
+        filter.setFilterProcessesUrl("/account/login");
         filter.setAuthenticationFailureHandler(loginAuthenticationFailureHandler);
         filter.setAuthenticationSuccessHandler(loginAuthenticationSuccessHandler);
         filter.setLoginAttemptService(loginAttemptService);
         filter.setCaptchaClient(captchaClient);
-
         return filter;
     }
 

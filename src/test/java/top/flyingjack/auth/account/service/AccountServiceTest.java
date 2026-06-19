@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.cache.CacheManager;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -12,6 +13,7 @@ import top.flyingjack.auth.account.entity.AuthUser;
 import top.flyingjack.auth.account.entity.PrincipalType;
 import top.flyingjack.auth.account.entity.dto.UserRequestDto;
 import top.flyingjack.auth.account.service.repository.AuthUserRepository;
+import top.flyingjack.auth.config.SnowflakeIdGenerator;
 import top.flyingjack.auth.feign.client.CaptchaClient;
 import top.flyingjack.common.error.exception.BusinessException;
 
@@ -27,12 +29,15 @@ class AccountServiceTest {
     private AuthUserRepository authUserRepository = Mockito.mock(AuthUserRepository.class);
     private CaptchaClient captchaClient = Mockito.mock(CaptchaClient.class);
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private CacheManager cacheManager = Mockito.mock(CacheManager.class);
     private final CommonTestData testData = new CommonTestData();
 
     private AccountService service = new AccountService(
             authUserRepository,
             captchaClient,
-            passwordEncoder
+            passwordEncoder,
+            new SnowflakeIdGenerator("1", "2"),
+            cacheManager
     );
 
     @BeforeEach

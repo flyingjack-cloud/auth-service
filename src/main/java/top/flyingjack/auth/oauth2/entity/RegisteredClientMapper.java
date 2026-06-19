@@ -3,6 +3,8 @@ package top.flyingjack.auth.oauth2.entity;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
@@ -24,6 +26,8 @@ import java.util.stream.Collectors;
  * @date 2025/4/4 12:36
  */
 public class RegisteredClientMapper {
+    private static final Logger log = LoggerFactory.getLogger(RegisteredClientMapper.class);
+
     private ObjectMapper objectMapper;
 
     public RegisteredClientMapper(ObjectMapper objectMapper) {
@@ -64,7 +68,9 @@ public class RegisteredClientMapper {
      */
     public CustomOauth2ClientEntity toEntity(RegisteredClient registeredClient) {
         CustomOauth2ClientEntity entity = new CustomOauth2ClientEntity();
-        entity.setId(Long.valueOf(registeredClient.getId()));
+        // id="0" 约定为"由数据库自动生成"，必须保持 null 才能触发 GenerationType.IDENTITY
+        String rawId = registeredClient.getId();
+        entity.setId("0".equals(rawId) ? null : Long.valueOf(rawId));
         entity.setClientId(registeredClient.getClientId());
         entity.setClientIdIssuedAt(registeredClient.getClientIdIssuedAt() == null ? Instant.now() :
                 registeredClient.getClientIdIssuedAt());
@@ -109,7 +115,6 @@ public class RegisteredClientMapper {
                         value = Duration.parse((String) value);
                     } catch (Exception e) {
                         // 如果解析失败，保留原值
-                        System.err.println("Failed to parse Duration: " + value);
                     }
                 }
                 settings.put(entry.getKey(), value);

@@ -1,6 +1,19 @@
-server:
-  address: 0.0.0.0
+# 一切应该以k8s路径下为准
 spring:
+  application:
+    name: auth-service
+  # 数据源：dev 由 application-dev.yml 覆盖，beta/prod 由 k8s Secret 注入 DB_URL 等环境变量
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 5000
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     serialization:
@@ -9,36 +22,41 @@ spring:
   messages:
     basename: i18n/message
     encoding: utf-8
-  cloud:
     sentinel:
       eager: false
       transport:
         dashboard: ${SENTINEL_HOST:127.0.0.1}:8858
-      datasource:
-        # 流控规则
-        flow-rule:
-          nacos:
-            server-addr: ${NACOS_HOST:127.0.0.1}:8848
-            namespace: flyingjack-${spring.profiles.active}
-            data-id: ${spring.application.name}-flow-rules.json
-            group-id: SENTINEL_GROUP
-            data-type: json
-            rule-type: flow
-        # 熔断规则
-        degrade-rule:
-          nacos:
-            server-addr: ${NACOS_HOST:127.0.0.1}:8848
-            namespace: flyingjack-${spring.profiles.active}
-            data-id: ${spring.application.name}-degrade-rules.json
-            group-id: SENTINEL_GROUP
-            data-type: json
-            rule-type: degrade
 
 feign:
   sentinel:
     enabled: true # @FeignClient将会被自动添加@SentinelResource
 
+
 # 雪花ID配置
 snowflake:
-  datacenter-id: ${DATACENTER_ID:1} # 不能超过31
-  machine-id: ${MACHINE_ID:1} # 不能超过31
+  datacenter-id: ${DATACENTER_ID:"node-1"} # 不能超过31
+  machine-id: ${MACHINE_ID:"pod-1"} # 不能超过31
+
+auth:
+  cors:
+    # 生产环境通过 CORS_ALLOWED_ORIGINS 环境变量注入前端域名，多个用逗号分隔
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  rsa:
+    # Base64 编码的 PKCS8 格式 RSA 私钥。生产环境必须通过 RSA_PRIVATE_KEY 注入；
+    # 不设置时会自动生成临时密钥（重启后 JWT 全部失效，仅限开发）
+    private-key: ${RSA_PRIVATE_KEY:}
+  oauth2:
+    gateway-client:
+      client-id: ${OAUTH2_CLIENT_ID:sample-client}
+      # 生产环境必须通过 OAUTH2_CLIENT_SECRET 注入强密码
+      client-secret: ${OAUTH2_CLIENT_SECRET:sample-secret-dev}
+      redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:4300/callback}
+
+# 默认只暴露 健康状态和基本信息
+management:
+  server:
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus

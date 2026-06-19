@@ -1,3 +1,42 @@
+-- oauth2 授权记录（分布式下替代 InMemoryOAuth2AuthorizationService）
+CREATE TABLE IF NOT EXISTS oauth2_authorization
+(
+    id                            varchar(100)                NOT NULL,
+    registered_client_id          varchar(100)                NOT NULL,
+    principal_name                varchar(200)                NOT NULL,
+    authorization_grant_type      varchar(100)                NOT NULL,
+    authorized_scopes             varchar(1000)               DEFAULT NULL,
+    attributes                    varchar(4000)               DEFAULT NULL,
+    state                         varchar(500)                DEFAULT NULL,
+    authorization_code_value      TEXT                        DEFAULT NULL,
+    authorization_code_issued_at  TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
+    authorization_code_expires_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
+    authorization_code_metadata   varchar(2000)               DEFAULT NULL,
+    access_token_value            TEXT                        DEFAULT NULL,
+    access_token_issued_at        TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
+    access_token_expires_at       TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
+    access_token_metadata         varchar(2000)               DEFAULT NULL,
+    access_token_type             varchar(100)                DEFAULT NULL,
+    access_token_scopes           varchar(1000)               DEFAULT NULL,
+    oidc_id_token_value           TEXT                        DEFAULT NULL,
+    oidc_id_token_issued_at       TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
+    oidc_id_token_expires_at      TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
+    oidc_id_token_metadata        varchar(2000)               DEFAULT NULL,
+    refresh_token_value           TEXT                        DEFAULT NULL,
+    refresh_token_issued_at       TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
+    refresh_token_expires_at      TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
+    refresh_token_metadata        varchar(2000)               DEFAULT NULL,
+    user_code_value               TEXT                        DEFAULT NULL,
+    user_code_issued_at           TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
+    user_code_expires_at          TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
+    user_code_metadata            varchar(2000)               DEFAULT NULL,
+    device_code_value             TEXT                        DEFAULT NULL,
+    device_code_issued_at         TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
+    device_code_expires_at        TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
+    device_code_metadata          varchar(2000)               DEFAULT NULL,
+    PRIMARY KEY (id)
+);
+
 -- oauth2 client注册
 CREATE TABLE IF NOT EXISTS oauth2_registered_client
 (

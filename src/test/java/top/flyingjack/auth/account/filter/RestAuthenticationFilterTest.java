@@ -142,7 +142,7 @@ class RestAuthenticationFilterTest {
     }
 
     @Test
-    public void should_clear_record_when_verifying_successfully(){
+    public void should_proceed_to_authenticate_when_captcha_verifies_successfully(){
         MockHttpServletRequest request = mockHttpServletRequest();
         request.addHeader("X-Captcha-ID", UUID.randomUUID().toString());
         request.addHeader("X-Captcha-Token", "asxc1");
@@ -152,7 +152,8 @@ class RestAuthenticationFilterTest {
         this.restAuthenticationFilter.attemptAuthentication(request, Mockito.mock(HttpServletResponse.class));
 
         Mockito.verify(this.captchaClient, Mockito.times(1)).verify(Mockito.any());
-        Mockito.verify(this.loginAttemptService, Mockito.times(1)).clear("testuser");
+        // 验证码通过后不清除失败计数，防止攻击者解完验证码继续爆破；clear() 由 LoginAuthenticationProvider 在密码验证成功后调用
+        Mockito.verify(this.loginAttemptService, Mockito.never()).clear("testuser");
         Mockito.verify(this.manager, Mockito.times(1)).authenticate(Mockito.any());
     }
 

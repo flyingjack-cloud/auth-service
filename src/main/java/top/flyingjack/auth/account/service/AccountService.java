@@ -2,17 +2,22 @@ package top.flyingjack.auth.account.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import top.flyingjack.auth.account.entity.AuthUser;
 import top.flyingjack.auth.account.entity.PrincipalType;
+import top.flyingjack.auth.account.entity.dto.ChangePasswordDto;
+import top.flyingjack.auth.account.entity.dto.UpdateProfileDto;
 import top.flyingjack.auth.account.entity.dto.UserRequestDto;
 import top.flyingjack.auth.account.service.repository.AuthUserRepository;
+import top.flyingjack.auth.config.SnowflakeIdGenerator;
 import top.flyingjack.auth.feign.client.CaptchaClient;
 import top.flyingjack.common.dto.CaptchaRequest;
 import top.flyingjack.common.error.ErrorCode;
@@ -34,19 +39,17 @@ public class AccountService {
     private final AuthUserRepository authUserRepository;
     private final CaptchaClient captchaClient;
     private final PasswordEncoder passwordEncoder;
-
-    @Value("${snowflake.datacenter-id}")
-    long datacenterId;
-    @Value("${snowflake.machine-id}")
-    long machineId;
     private final SnowflakeIdGeneratorDelegate snowflakeIdGenerator;
+    private final CacheManager cacheManager;
 
     public AccountService(AuthUserRepository authUserRepository, CaptchaClient captchaClient,
-                          PasswordEncoder passwordEncoder) {
+                          PasswordEncoder passwordEncoder, SnowflakeIdGenerator snowflakeIdGenerator,
+                          CacheManager cacheManager) {
         this.authUserRepository = authUserRepository;
         this.captchaClient = captchaClient;
         this.passwordEncoder = passwordEncoder;
-        this.snowflakeIdGenerator = new SnowflakeIdGeneratorDelegate(datacenterId, machineId);
+        this.snowflakeIdGenerator = snowflakeIdGenerator.getDelegate();
+        this.cacheManager = cacheManager;
     }
 
     /**
@@ -170,7 +173,7 @@ public class AccountService {
     private static void dtoPreCheck(UserRequestDto userRequestDto) {
         // 1. 检查是否包含验证码和密码格式
         if (!StringUtils.hasLength(userRequestDto.code()) || !Verify.verifyPassword(userRequestDto.password())) {
-            log.warn("Missing verify code {} or Invalid password {}", userRequestDto.code() , userRequestDto.password());
+            log.warn("Missing verify code or invalid password format for registerType={}", userRequestDto.registerType());
             throw new IllegalArgumentException("Invalid password or captcha" + userRequestDto.registerType());
         }
     }
@@ -180,6 +183,67 @@ public class AccountService {
         if (!this.captchaClient.verify(new CaptchaRequest(dto.principal(), dto.code()))) {
             throw new BusinessException(ErrorCode.NEED_CAPTCHA);
         }
+    }
+
+    /**
+     * 获取当前登录用户信息
+     */
+    public AuthUser getProfile(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || !(authentication.getPrincipal() instanceof AuthUser)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        AuthUser principal = (AuthUser) authentication.getPrincipal();
+        // 从 DB 刷新以获取最新数据（session 中的 principal 可能已过期）
+        return authUserRepository.findById(principal.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    /**
+     * 修改个人资料（目前仅支持修改用户名）
+     */
+    @Transactional
+    public AuthUser updateProfile(Authentication authentication, UpdateProfileDto dto) {
+        AuthUser current = getProfile(authentication);
+
+        if (!StringUtils.hasText(dto.username())) {
+            return current;
+        }
+
+        String newUsername = dto.username().trim();
+        if (!Verify.verifyUsername(newUsername)) {
+            throw new IllegalArgumentException("Invalid username format: " + newUsername);
+        }
+        if (isUsernameExist(newUsername)) {
+            throw new BusinessException(ErrorCode.OBJECT_CONFLICT);
+        }
+
+        // 清除新旧用户名的 exist 缓存
+        var cache = cacheManager.getCache("user");
+        if (cache != null) {
+            cache.evict("existCheck:" + current.getUsername());
+            cache.evict("existCheck:" + newUsername);
+        }
+
+        authUserRepository.updateUsernameById(newUsername, current.getId());
+        return authUserRepository.findById(current.getId()).orElseThrow();
+    }
+
+    /**
+     * 已登录状态下修改密码（需要旧密码验证）
+     */
+    @Transactional
+    public void changePassword(Authentication authentication, ChangePasswordDto dto) {
+        AuthUser current = getProfile(authentication);
+
+        if (!passwordEncoder.matches(dto.oldPassword(), current.getPassword())) {
+            throw new BusinessException(ErrorCode.WRONG_PASSWORD);
+        }
+        if (!Verify.verifyPassword(dto.newPassword())) {
+            throw new IllegalArgumentException("Invalid new password format");
+        }
+
+        authUserRepository.updatePasswordById(passwordEncoder.encode(dto.newPassword()), current.getId());
     }
 
     // 生成一个雪花id用户名
