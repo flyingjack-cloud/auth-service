@@ -1,6 +1,18 @@
 # auth-service API 文档
 
-> Base URL（dev）：`http://localhost:9001`
+> **Base URL**
+> - Dev：`http://localhost:9001`
+> - Prod：`https://auth.flyingjack.top`
+>
+> **路径前缀（prod）**
+>
+> | 类型 | 路径示例 | 说明 |
+> |---|---|---|
+> | 业务 API | `/api/account/login` | Istio 剥除 `/api` 前缀后转发给 auth-service |
+> | OAuth2 端点 | `/oauth2/token` | 直通，路径不变 |
+> | OIDC 发现 | `/.well-known/openid-configuration` | 直通，路径不变 |
+>
+> Dev 环境直连 `localhost:9001`，路径不带 `/api` 前缀（如 `/account/login`）。
 >
 > 所有业务响应均包裹在统一格式中：
 > ```json
