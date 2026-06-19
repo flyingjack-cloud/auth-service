@@ -6,7 +6,10 @@
 
 所有敏感配置通过 `envFrom: secretRef` 注入为 OS 环境变量，服务启动时由 Spring Boot 读取，不依赖 Spring Cloud Kubernetes API。
 
-**TLS 证书**通过 cert-manager 手动申请，不走 ArgoCD 管理（cert-manager 自动续签，无需 GitOps 介入）。
+| 环境 | 访问方式 | TLS |
+|---|---|---|
+| beta | Tailscale 内网，NodePort 30880，HTTP | 无需证书，Tailscale WireGuard 加密 |
+| prod | 公网，Istio Gateway，HTTPS | cert-manager 自动签发/续签 |
 
 ---
 
@@ -24,7 +27,7 @@ kubectl create secret generic auth-connect \
   --from-literal=DB_USER=postgres \
   --from-literal=DB_PASSWORD=<实际密码> \
   --from-literal=RSA_PRIVATE_KEY=<Base64编码的PKCS8私钥> \
-  --from-literal=CORS_ALLOWED_ORIGINS=https://beta-auth.flyingjack.top \
+  --from-literal=CORS_ALLOWED_ORIGINS=http://beta-auth.flyingjack.top \
   -n flyingjack-beta \
   --dry-run=client -o yaml | kubectl apply -f -
 
@@ -113,37 +116,26 @@ kubectl get secret cache-access-secret -n flyingjack-prod -o jsonpath='{.data}' 
 
 ---
 
-## 手动申请 TLS 证书（首次部署时执行）
+## Beta 环境访问
+
+Beta 仅限 Tailscale 内网访问，通过 NodePort 30880 暴露，无需 TLS（Tailscale WireGuard 隧道已加密）。
+
+- **访问地址**：`http://100.107.74.15:30880`
+- **DNS**：`beta-auth.flyingjack.top` A 记录指向 Tailscale IP `100.107.74.15`（不可公网路由）
+- **安全组**：无需开放 30880 端口，公网无法访问；Tailscale 流量通过 WireGuard 绕过安全组
+
+```bash
+# 验证
+curl http://100.107.74.15:30880/actuator/health
+```
+
+---
+
+## 手动申请 TLS 证书（仅 Prod，首次部署时执行）
 
 cert-manager Certificate 资源不走 ArgoCD 管理，需手动在 `istio-system` 命名空间申请一次，之后 cert-manager 自动续签。
 
-> **关于 HTTP→HTTPS 重定向**：Istio Gateway 未配置 `httpsRedirect`，这是有意为之。cert-manager 使用 HTTP-01 方式验证域名，若开启重定向会导致每次续签时 ACME challenge 被 301 拦截，形成死锁。auth-service 的 OAuth2 客户端均通过注册的 HTTPS redirect_uri 访问，不依赖 HTTP 自动跳转。
-
-### Beta 环境
-
-```bash
-# 如之前错误地在 flyingjack-beta 创建了 Certificate，先清理
-kubectl delete certificate beta-auth-flyingjack-top-tls -n flyingjack-beta --ignore-not-found
-
-# 在 istio-system 申请证书
-kubectl apply -f - <<EOF
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: beta-auth-flyingjack-top-tls
-  namespace: istio-system
-spec:
-  secretName: beta-auth-flyingjack-top-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - beta-auth.flyingjack.top
-EOF
-
-# 等待签发完成（READY 变为 True）
-kubectl get certificate beta-auth-flyingjack-top-tls -n istio-system -w
-```
+> **关于 HTTP→HTTPS 重定向**：Prod Istio Gateway 未配置 `httpsRedirect`，这是有意为之。cert-manager 使用 HTTP-01 方式验证域名，若开启重定向会导致每次续签时 ACME challenge 被 301 拦截，形成死锁。
 
 ### Prod 环境
 
