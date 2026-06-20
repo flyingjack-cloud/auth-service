@@ -2,6 +2,10 @@
 spring:
   application:
     name: auth-service
+  cloud:
+    kubernetes:
+      discovery:
+        enabled: false  # 默认关闭，仅 prod profile 开启
   # 数据源：dev 由 application-dev.yml 覆盖，beta/prod 由 k8s Secret 注入 DB_URL 等环境变量
   datasource:
     url: ${DB_URL}

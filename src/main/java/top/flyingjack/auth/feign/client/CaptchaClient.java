@@ -12,7 +12,8 @@ import top.flyingjack.common.dto.CaptchaRequest;
  * @author Zumin Li
  * @date 2025/4/14 1:29
  */
-@FeignClient(name = "thirdparty-service",
+@FeignClient(name = "third-party-service",
+        url = "${thirdparty.service.url:}",
         path = "/captcha",
         fallbackFactory = CaptchaClientFallbackFactory.class
 )

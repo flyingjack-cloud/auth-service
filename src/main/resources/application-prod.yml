@@ -1,3 +1,9 @@
+spring:
+  cloud:
+    kubernetes:
+      discovery:
+        enabled: true
+
 springdoc:
   swagger-ui:
     enabled: false

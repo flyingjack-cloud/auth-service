@@ -1,3 +1,7 @@
+thirdparty:
+  service:
+    url: http://third-party-service
+
 springdoc:
   swagger-ui:
     enabled: true
