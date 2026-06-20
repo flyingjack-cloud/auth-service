@@ -249,6 +249,37 @@ prod 环境将 `beta` 替换为 `prod` 重复执行。
 
 ---
 
+## 部署验证（浏览器 Smoke Test）
+
+以下两个接口可直接在浏览器中访问，用于快速验证 Prod 环境整条链路是否正常。
+
+### 1. OIDC 发现文档
+
+```
+https://auth.flyingjack.top/.well-known/openid-configuration
+```
+
+验证点：
+- 能返回 JSON 说明 **Istio `/.well-known/` 直通路由**正常
+- JSON 中 `"issuer"` 字段必须为 `"https://auth.flyingjack.top"`，否则说明 `AUTH_ISSUER_URI` 环境变量未注入，检查 k8s-gitops 中对应环境的 Secret/ConfigMap
+
+### 2. 登录状态检查
+
+```
+https://auth.flyingjack.top/api/account/check-login
+```
+
+预期返回：
+```json
+{ "code": 401, "message": "用户未登录", "data": null }
+```
+
+验证点：
+- 能返回上述 JSON 说明 **Istio `/api/` 前缀路由**正常（前缀已被剥除，请求正确到达 auth-service）
+- 若返回 502/503，检查 Pod 是否正常运行：`kubectl get pods -n flyingjack-prod`
+
+---
+
 ## 注意事项
 
 - `.env.secret` 文件**不得**提交到 `k8s-gitops` 仓库，gitops 仓库中不存在这些文件属于正常状态。

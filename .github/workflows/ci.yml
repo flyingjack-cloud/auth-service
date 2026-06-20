@@ -105,13 +105,17 @@ jobs:
 
       # Step 11: 更新 gitops 仓库镜像 tag，触发 ArgoCD 同步
       # develop → beta overlay，main → prod overlay
-      - name: Update gitops image tag
+      # 当前使用 Gitee 作为 gitops 仓库（ArgoCD 国内访问 GitHub 不稳定）
+      # 如需切回 GitHub，注释掉 Gitee 步骤，取消注释 GitHub 步骤
+
+      # ---- Gitee（当前启用）----
+      - name: Update gitops image tag (Gitee)
         env:
-          GITOPS_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
           IMAGE: ${{ secrets.REGISTRY_URL }}/auth-service:${{ env.PROFILE }}-${{ env.SHORT_SHA }}
           OVERLAY: auth-service/overlays/${{ env.PROFILE }}
         run: |
-          git clone https://x-access-token:${GITOPS_TOKEN}@github.com/flyingjack-cloud/k8s-gitops.git
+          git clone https://oauth2:${GITEE_TOKEN}@gitee.com/zuminli/k8s-gitops.git
           cd k8s-gitops
           sed -i "s|image: .*auth-service.*|image: ${IMAGE}|" "${OVERLAY}/deployment-patch.yaml"
           git config user.email "ci@flyingjack.com"
@@ -123,3 +127,23 @@ jobs:
             git commit -m "chore(auth-service): update image to ${{ env.PROFILE }}-${{ env.SHORT_SHA }}"
             git push
           fi
+
+      # ---- GitHub（备用，切回时取消注释）----
+      # - name: Update gitops image tag (GitHub)
+      #   env:
+      #     GITOPS_TOKEN: ${{ steps.app-token.outputs.token }}
+      #     IMAGE: ${{ secrets.REGISTRY_URL }}/auth-service:${{ env.PROFILE }}-${{ env.SHORT_SHA }}
+      #     OVERLAY: auth-service/overlays/${{ env.PROFILE }}
+      #   run: |
+      #     git clone https://x-access-token:${GITOPS_TOKEN}@github.com/flyingjack-cloud/k8s-gitops.git
+      #     cd k8s-gitops
+      #     sed -i "s|image: .*auth-service.*|image: ${IMAGE}|" "${OVERLAY}/deployment-patch.yaml"
+      #     git config user.email "ci@flyingjack.com"
+      #     git config user.name "CI Bot"
+      #     git add "${OVERLAY}/deployment-patch.yaml"
+      #     if git diff --cached --quiet; then
+      #       echo "Image tag unchanged, nothing to push"
+      #     else
+      #       git commit -m "chore(auth-service): update image to ${{ env.PROFILE }}-${{ env.SHORT_SHA }}"
+      #       git push
+      #     fi
