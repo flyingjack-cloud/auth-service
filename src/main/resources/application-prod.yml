@@ -3,6 +3,7 @@ spring:
     kubernetes:
       discovery:
         enabled: true
+        discovery-server-url: https://kubernetes.default.svc.cluster.local:443
 
 springdoc:
   swagger-ui:
