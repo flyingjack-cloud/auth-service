@@ -129,6 +129,18 @@ public class AccountService {
     }
 
     /**
+     * 按手机号查找 userId，供内部服务调用
+     *
+     * @param phone 手机号
+     * @return 用户 ID，不存在时返回 null
+     */
+    public Long findUserIdByPhone(String phone) {
+        return authUserRepository.findAuthUserByPhone(phone)
+                .map(AuthUser::getId)
+                .orElse(null);
+    }
+
+    /**
      * 检查username是否已经存在(带缓存)
      *
      * @param username 手机号

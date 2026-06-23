@@ -193,6 +193,8 @@ curl -X DELETE https://<auth-service地址>/oauth2/clients/sample-client
 
 ## ArgoCD Application 创建
 
+> **前置条件**：Namespace 须提前手动创建，见 `k8s-gitops/shared/DEPLOY.md`。ArgoCD Application 不负责创建 Namespace，防止 auto-prune 误删命名空间。
+
 在 ArgoCD 所在集群执行（或通过 ArgoCD UI 导入）：
 
 ```bash
@@ -215,8 +217,6 @@ spec:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
 EOF
 ```
 

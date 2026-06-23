@@ -37,7 +37,8 @@
 
 ### 登录
 ```
-POST /account/login
+Dev:  POST /account/login
+Prod: POST /api/account/login
 ```
 **权限：** 公开
 
@@ -74,7 +75,8 @@ POST /account/login
 
 ### 登出
 ```
-POST /account/logout
+Dev:  POST /account/logout
+Prod: POST /api/account/logout
 ```
 **权限：** 公开
 
@@ -89,7 +91,8 @@ POST /account/logout
 
 ### 检查登录状态
 ```
-GET /account/check-login
+Dev:  GET /account/check-login
+Prod: GET /api/account/check-login
 ```
 **权限：** 公开
 
@@ -116,7 +119,8 @@ GET /account/check-login
 
 ### 检查用户名是否已注册
 ```
-GET /account/check/username?username={username}
+Dev:  GET /account/check/username?username={username}
+Prod: GET /api/account/check/username?username={username}
 ```
 **权限：** 公开
 
@@ -126,7 +130,8 @@ GET /account/check/username?username={username}
 
 ### 检查邮箱是否已注册
 ```
-GET /account/check/email?email={email}
+Dev:  GET /account/check/email?email={email}
+Prod: GET /api/account/check/email?email={email}
 ```
 **权限：** 公开
 
@@ -134,7 +139,8 @@ GET /account/check/email?email={email}
 
 ### 检查手机号是否已注册
 ```
-GET /account/check/phone?phone={phone}
+Dev:  GET /account/check/phone?phone={phone}
+Prod: GET /api/account/check/phone?phone={phone}
 ```
 **权限：** 公开
 
@@ -142,7 +148,8 @@ GET /account/check/phone?phone={phone}
 
 ### 注册账号
 ```
-POST /account/register
+Dev:  POST /account/register
+Prod: POST /api/account/register
 ```
 **权限：** 公开
 
@@ -177,7 +184,8 @@ POST /account/register
 
 ### 重置密码（未登录，忘记密码场景）
 ```
-POST /account/reset-password
+Dev:  POST /account/reset-password
+Prod: POST /api/account/reset-password
 ```
 **权限：** 公开
 
@@ -198,7 +206,8 @@ POST /account/reset-password
 
 ### 获取个人资料
 ```
-GET /account/profile
+Dev:  GET /account/profile
+Prod: GET /api/account/profile
 ```
 **权限：** 已登录
 
@@ -218,7 +227,8 @@ GET /account/profile
 
 ### 更新个人资料
 ```
-PUT /account/profile
+Dev:  PUT /account/profile
+Prod: PUT /api/account/profile
 ```
 **权限：** 已登录
 
@@ -234,7 +244,8 @@ PUT /account/profile
 
 ### 修改密码（已登录）
 ```
-POST /account/change-password
+Dev:  POST /account/change-password
+Prod: POST /api/account/change-password
 ```
 **权限：** 已登录
 
@@ -366,7 +377,8 @@ GET /.well-known/oauth2-authorization-server
 
 ### 列出所有客户端
 ```
-GET /clients/
+Dev:  GET /clients/
+Prod: GET /api/clients/
 ```
 
 **成功响应 200：**
@@ -394,7 +406,8 @@ GET /clients/
 
 ### 查询单个客户端
 ```
-GET /clients/{client_id}
+Dev:  GET /clients/{client_id}
+Prod: GET /api/clients/{client_id}
 ```
 
 **失败响应 404：** 客户端不存在
@@ -403,7 +416,8 @@ GET /clients/{client_id}
 
 ### 创建客户端
 ```
-POST /clients/
+Dev:  POST /clients/
+Prod: POST /api/clients/
 ```
 
 **请求体：**
@@ -433,7 +447,8 @@ POST /clients/
 
 ### 更新客户端
 ```
-PUT /clients/{client_id}
+Dev:  PUT /clients/{client_id}
+Prod: PUT /api/clients/{client_id}
 ```
 
 **请求体：**（所有字段可选，仅传需要修改的字段）
@@ -453,7 +468,8 @@ PUT /clients/{client_id}
 
 ### 删除客户端
 ```
-DELETE /clients/{client_id}
+Dev:  DELETE /clients/{client_id}
+Prod: DELETE /api/clients/{client_id}
 ```
 
 **成功响应 204**
@@ -468,7 +484,8 @@ DELETE /clients/{client_id}
 
 ### 分页查询用户列表
 ```
-GET /admin/users?page=0&size=20&search={username}
+Dev:  GET /admin/users?page=0&size=20&search={username}
+Prod: GET /api/admin/users?page=0&size=20&search={username}
 ```
 
 | 参数 | 类型 | 默认 | 说明 |
@@ -507,7 +524,8 @@ GET /admin/users?page=0&size=20&search={username}
 
 ### 查询单个用户
 ```
-GET /admin/users/{id}
+Dev:  GET /admin/users/{id}
+Prod: GET /api/admin/users/{id}
 ```
 
 **失败响应 404：** 用户不存在
@@ -516,7 +534,8 @@ GET /admin/users/{id}
 
 ### 更新账号状态（启用/禁用/锁定）
 ```
-PUT /admin/users/{id}/status
+Dev:  PUT /admin/users/{id}/status
+Prod: PUT /api/admin/users/{id}/status
 ```
 
 **请求体：**（字段为 `null` 时不修改该项）
@@ -538,7 +557,8 @@ PUT /admin/users/{id}/status
 
 ### 更新用户角色
 ```
-PUT /admin/users/{id}/roles
+Dev:  PUT /admin/users/{id}/roles
+Prod: PUT /api/admin/users/{id}/roles
 ```
 
 **请求体：**
@@ -560,7 +580,8 @@ PUT /admin/users/{id}/roles
 
 ### 删除用户
 ```
-DELETE /admin/users/{id}
+Dev:  DELETE /admin/users/{id}
+Prod: DELETE /api/admin/users/{id}
 ```
 
 **成功响应 204**

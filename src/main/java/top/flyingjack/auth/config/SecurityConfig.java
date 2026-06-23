@@ -58,6 +58,9 @@ public class SecurityConfig {
                         // OAuth2 AS 端点全部公开（框架自身负责客户端认证）
                         .requestMatchers("/oauth2/**", "/.well-known/**")
                         .permitAll()
+                        // 内部服务间接口（网络层由 Istio 限制来源，Spring Security 无需再鉴权）
+                        .requestMatchers("/internal/**")
+                        .permitAll()
                         // /account/profile, /account/change-password, /admin/** 等需要认证
                         .anyRequest()
                         .authenticated()
