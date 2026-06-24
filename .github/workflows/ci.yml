@@ -9,6 +9,8 @@ on:
       - 'k8s/**'
       - '**.md'
   workflow_dispatch:
+  repository_dispatch:
+    types: [common-lib-updated]
 
 jobs:
   build-and-push:
@@ -35,39 +37,49 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           submodules: false
 
-      # Step 3: 将本次触发的 auth-service commit checkout 到 auth-service/ 目录
-      # 不指定 repository，默认为当前触发仓库（auth-service）
+      # Step 3: 解析目标分支和 image tag 后缀
+      # - push/workflow_dispatch：使用当前分支和 service SHA
+      # - repository_dispatch（common-lib 变更）：使用 client_payload 中的分支，tag 后缀为 cl{commonlib-sha}
+      - name: Resolve target ref and image tag
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "ref=${{ github.event.client_payload.ref }}" >> $GITHUB_OUTPUT
+            echo "short_sha=cl${{ github.event.client_payload.common_lib_sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "ref=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          fi
+
+      # Step 4: checkout auth-service
       - name: Checkout auth-service
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ steps.target.outputs.ref }}
           path: auth-service
           token: ${{ steps.app-token.outputs.token }}
 
-      # Step 4: checkout common-lib，使用与当前触发分支同名的分支
-      # develop 触发 → common-lib develop，main 触发 → common-lib main
+      # Step 5: checkout common-lib，使用目标分支
       - name: Checkout common-lib (latest)
         uses: actions/checkout@v4
         with:
           repository: flyingjack-cloud/common-lib
           token: ${{ steps.app-token.outputs.token }}
           path: common-lib
-          ref: ${{ github.ref_name }}
+          ref: ${{ steps.target.outputs.ref }}
 
-      # Step 4: 确保 mvnw 有执行权限（checkout 后可能丢失 +x）
       - name: Make mvnw executable
         run: chmod +x mvnw
 
-      # Step 5: 从分支名推导 Maven profile 和镜像 tag 前缀
-      # develop → beta，main → prod
+      # Step 6: 从分支名推导 Maven profile，image tag 使用前面解析的 short_sha
       - name: Set build variables
         run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then
+          if [ "${{ steps.target.outputs.ref }}" = "main" ]; then
             echo "PROFILE=prod" >> $GITHUB_ENV
           else
             echo "PROFILE=beta" >> $GITHUB_ENV
           fi
-          echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+          echo "SHORT_SHA=${{ steps.target.outputs.short_sha }}" >> $GITHUB_ENV
 
       # Step 6: 安装 common-lib 到本地 Maven 仓库
       # -f 直接指向模块 pom.xml，Maven 只将根 pom 作为 parent 读取，
